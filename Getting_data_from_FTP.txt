@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+import pandas as pd, numpy as np
+
+import ftplib
+import zipfile
+import os
+
+FTP_HOST = "" # add host
+FTP_USER = "" # add username
+FTP_PASS = "" # add password
+
+# connect to the FTP server
+ftp = ftplib.FTP(FTP_HOST, FTP_USER, FTP_PASS)
+
+############# Start loop
+
+extension = 'Compliance'
+
+cwd = os.getcwd()
+cwd
+
+import openpyxl as px
+
+Compliance = pd.DataFrame(columns=['LRIMOShipNo','ShipName','ShiponEUSanctionList','ShiponOFACNonSDNSanctionList',
+                                   'ShiponOFACSanctionList','ShiponUNSanctionList','Date'])
+
+for item in ftp.nlst():
+    if item.startswith(extension):
+        filename = ("RETR "+item)
+        file = open(item, "wb")
+        ftp.retrbinary(filename, file.write)
+        file.close()
+#         zipfile = item
+#         print(file)
+        with zipfile.ZipFile(item, 'r') as zip_ref:
+            zip_ref.extractall(cwd)
+
+        Work_Book = px.load_workbook(filename='Compliance.xlsx')
+        Work_Sheet = Work_Book.active
+        df = pd.DataFrame(Work_Sheet.values)
+        new_header = df.iloc[0] #grab the first row for the header
+        df = df[1:] #take the data less the header row
+        df.columns = new_header #set the header row as the df header
+        df['Date'] = item[11:15]+"-"+item[15:17]+"-"+item[17:19]
+        Compliance = pd.concat([df,Compliance])
+
+
+compliance_Data_Fin_df = Compliance # Compute a Pandas dataframe to write into Compliance_Data_Fin
